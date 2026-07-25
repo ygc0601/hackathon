@@ -1,0 +1,28 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and build outputs
+node_modules/
+dist/
+build/
+.next/
+
+# Mobile and IDE files
+.expo/
+.dart_tool/
+.idea/
+.vscode/
+*.iml
+
+# OS and temporary files
+.DS_Store
+Thumbs.db
+*.log
+tmp/
+
+# User-generated sensitive test data
+uploads/
+test-data/private/
+
