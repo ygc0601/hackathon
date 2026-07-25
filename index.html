@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>쉬운말 번역 프로토타입</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="panel side-panel">
+      <div class="brand">
+        <p class="eyebrow">Easy Read Prototype</p>
+        <h1>쉬운말 번역</h1>
+        <p class="brand-copy">
+          지적·발달장애 당사자가 안내문을 쉽게 이해할 수 있도록
+          글, 그림, 음성 흐름을 함께 보여주는 시연용 프로토타입입니다.
+        </p>
+      </div>
+
+      <section class="settings-block">
+        <div class="section-title-row">
+          <h2>보호자 설정</h2>
+          <span class="status-pill">자동 반영</span>
+        </div>
+
+        <label class="field">
+          <span>글 난이도</span>
+          <select id="difficulty">
+            <option value="very-easy">매우 쉬움</option>
+            <option value="easy" selected>쉬움</option>
+            <option value="plain">보통</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>문장 길이</span>
+          <select id="sentenceLength">
+            <option value="short" selected>짧게</option>
+            <option value="medium">보통</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>음성 속도</span>
+          <select id="speechRate">
+            <option value="0.7">천천히</option>
+            <option value="0.9" selected>조금 천천히</option>
+            <option value="1">보통</option>
+          </select>
+        </label>
+
+        <label class="toggle">
+          <input type="checkbox" id="usePictogram" checked>
+          <span>픽토그램 사용</span>
+        </label>
+
+        <label class="toggle">
+          <input type="checkbox" id="focusMode" checked>
+          <span>읽는 줄 하이라이트</span>
+        </label>
+      </section>
+
+      <section class="settings-block">
+        <div class="section-title-row">
+          <h2>시연 문서</h2>
+          <button type="button" class="ghost-button" id="sampleDocButton">샘플 불러오기</button>
+        </div>
+        <p class="assistive-text">
+          실제 OCR 대신 시연용 원문을 불러와 쉬운말 변환 흐름을 보여줍니다.
+        </p>
+        <textarea id="sourceText" rows="8">본 우편물은 기한 내 제출하지 않을 경우 서비스 이용에 제한이 발생할 수 있으니 관련 서류를 빠짐없이 준비하여 주민센터에 방문하시기 바랍니다.</textarea>
+      </section>
+    </aside>
+
+    <main class="panel main-stage">
+      <header class="hero-card">
+        <div>
+          <p class="eyebrow">당사자 모드</p>
+          <h2>큰 버튼 하나로 시작해요</h2>
+          <p class="hero-copy">
+            촬영한 안내문을 당사자의 이해 수준에 맞는 쉬운 말로 바꾸고,
+            그림과 음성으로 차분하게 설명합니다.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <label class="camera-button" for="docUpload">
+            <input id="docUpload" type="file" accept="image/*">
+            <span class="camera-icon">◎</span>
+            <span>카메라 쉬운말 번역</span>
+          </label>
+          <button type="button" class="secondary-button" id="translateButton">지금 번역하기</button>
+        </div>
+      </header>
+
+      <section class="content-grid">
+        <article class="viewer-card">
+          <div class="section-title-row">
+            <h3>촬영 문서</h3>
+            <span class="meta-text" id="uploadState">샘플 문서 대기 중</span>
+          </div>
+          <div class="document-preview" id="documentPreview">
+            <p>촬영한 문서 이미지가 이곳에 보입니다.</p>
+          </div>
+        </article>
+
+        <article class="viewer-card translation-card">
+          <div class="section-title-row">
+            <h3>쉬운말 결과</h3>
+            <div class="inline-actions">
+              <button type="button" class="ghost-button" id="speakButton">음성 읽기</button>
+              <button type="button" class="ghost-button" id="stopButton">멈추기</button>
+            </div>
+          </div>
+
+          <div class="translation-output" id="translationOutput">
+            <p class="placeholder">왼쪽 원문을 바탕으로 쉬운말 결과가 여기에 표시됩니다.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
