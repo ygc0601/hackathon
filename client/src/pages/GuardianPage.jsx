@@ -5,13 +5,13 @@ import '../App.css'
 import { useAuth } from '../contexts/AuthContext.jsx'
 
 function GuardianPage() {
-  const { user, logout, profile, activeRole, setActiveRole } = useAuth()
+  const { user, logout, activeMode, setActiveMode } = useAuth()
 
   useEffect(() => {
-    if (activeRole !== 'guardian') {
-      setActiveRole('guardian')
+    if (activeMode !== 'guardian') {
+      setActiveMode('guardian')
     }
-  }, [activeRole, setActiveRole])
+  }, [activeMode, setActiveMode])
 
   return (
     <main className="app">
@@ -26,7 +26,7 @@ function GuardianPage() {
         {user ? (
           <div className="session-group">
             <p className="session-text">로그인 계정: {user.email}</p>
-            <p className="session-text">보유 역할: {profile?.roles?.join(', ')}</p>
+            <p className="session-text">현재 화면: 보호자</p>
           </div>
         ) : null}
 
@@ -37,11 +37,9 @@ function GuardianPage() {
           <Link to="/participant" className="primary-button link-button">
             당사자 화면 보기
           </Link>
-          {profile?.roles?.length > 1 ? (
-            <Link to="/role-select" className="secondary-button link-button">
-              역할 다시 선택
-            </Link>
-          ) : null}
+          <Link to="/role-select" className="secondary-button link-button">
+            화면 다시 선택
+          </Link>
           <button type="button" className="secondary-button" onClick={logout}>
             로그아웃
           </button>

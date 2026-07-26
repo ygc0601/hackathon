@@ -5,15 +5,14 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, setDoc } from 'firebase/firestore'
 import { auth, db, isFirebaseConfigured } from '../firebase/config.js'
 
 const AuthContext = createContext(null)
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [activeRole, setActiveRole] = useState(null)
+  const [activeMode, setActiveMode] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,92 +21,58 @@ function AuthProvider({ children }) {
       return undefined
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
-      setUser(nextUser)
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (nextUser) => {
+        setUser(nextUser)
 
-      if (!nextUser || !db) {
-        setProfile(null)
-        setActiveRole(null)
+        if (!nextUser) {
+          setActiveMode(null)
+        }
+
         setLoading(false)
-        return
-      }
-
-      const profileRef = doc(db, 'userProfiles', nextUser.uid)
-      const snapshot = await getDoc(profileRef)
-      const nextProfile = snapshot.exists() ? snapshot.data() : null
-
-      setProfile(nextProfile)
-
-      if (!nextProfile?.roles?.length) {
-        setActiveRole(null)
-      } else if (nextProfile.roles.length === 1) {
-        setActiveRole(nextProfile.roles[0])
-      }
-
-      setLoading(false)
-    })
+      },
+      () => {
+        setUser(null)
+        setActiveMode(null)
+        setLoading(false)
+      },
+    )
 
     return unsubscribe
   }, [])
 
-  const getNextPath = (roles) => {
-    if (!roles?.length) {
-      return '/login'
-    }
-
-    if (roles.length > 1) {
-      return '/role-select'
-    }
-
-    return roles[0] === 'guardian' ? '/guardian' : '/participant'
-  }
-
   const value = useMemo(
     () => ({
       user,
-      profile,
-      activeRole,
+      activeMode,
       loading,
       isFirebaseConfigured,
-      setActiveRole,
-      getNextPath,
+      setActiveMode,
       login: async (email, password) => {
         if (!auth) {
           throw new Error('Firebase 설정이 아직 연결되지 않았어요.')
         }
 
         const credential = await signInWithEmailAndPassword(auth, email, password)
-        const profileRef = doc(db, 'userProfiles', credential.user.uid)
-        const snapshot = await getDoc(profileRef)
-        const roles = snapshot.exists() ? snapshot.data().roles ?? [] : []
-
-        return { credential, roles, nextPath: getNextPath(roles) }
+        setActiveMode(null)
+        return { credential, nextPath: '/role-select' }
       },
-      signup: async (email, password, roles) => {
+      signup: async (email, password) => {
         if (!auth || !db) {
           throw new Error('Firebase 설정이 아직 연결되지 않았어요.')
-        }
-
-        const cleanRoles = Array.from(new Set(roles))
-
-        if (!cleanRoles.length) {
-          throw new Error('최소 한 개의 역할을 선택해 주세요.')
         }
 
         const credential = await createUserWithEmailAndPassword(auth, email, password)
         const profileData = {
           email,
-          roles: cleanRoles,
-          linkedGuardianIds: [],
-          linkedParticipantIds: [],
           createdAt: new Date().toISOString(),
         }
 
         await setDoc(doc(db, 'userProfiles', credential.user.uid), profileData)
-        setProfile(profileData)
-        setActiveRole(cleanRoles.length === 1 ? cleanRoles[0] : null)
+        setActiveMode(null)
 
-        return { credential, roles: cleanRoles, nextPath: getNextPath(cleanRoles) }
+        return { credential, nextPath: '/role-select' }
       },
       logout: async () => {
         if (!auth) {
@@ -117,7 +82,7 @@ function AuthProvider({ children }) {
         await signOut(auth)
       },
     }),
-    [activeRole, loading, profile, user],
+    [activeMode, loading, user],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

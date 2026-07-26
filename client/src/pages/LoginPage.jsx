@@ -6,23 +6,18 @@ import { useAuth } from '../contexts/AuthContext.jsx'
 function LoginPage() {
   const navigate = useNavigate()
   const { login, signup, isFirebaseConfigured } = useAuth()
-  const [role, setRole] = useState('participant')
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [includeGuardian, setIncludeGuardian] = useState(false)
-  const [includeParticipant, setIncludeParticipant] = useState(true)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-
-  const nextPath = role === 'guardian' ? '/guardian' : '/participant'
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
 
     if (!isFirebaseConfigured) {
-      navigate(nextPath)
+      navigate('/role-select')
       return
     }
 
@@ -30,12 +25,7 @@ function LoginPage() {
       setSubmitting(true)
 
       if (mode === 'signup') {
-        const roles = [
-          includeParticipant ? 'participant' : null,
-          includeGuardian ? 'guardian' : null,
-        ].filter(Boolean)
-
-        const result = await signup(email, password, roles)
+        const result = await signup(email, password)
         navigate(result.nextPath)
       } else {
         const result = await login(email, password)
@@ -54,8 +44,8 @@ function LoginPage() {
         <p className="eyebrow">Login Step</p>
         <h1>로그인</h1>
         <p className="description">
-          Firebase 이메일 로그인 기준으로 먼저 연결했어. 지금은 역할 선택과
-          로그인/회원가입 흐름을 같이 잡아두는 단계야.
+          하나의 계정으로 당사자 화면과 보호자 화면을 모두 사용할 수 있어요.
+          로그인한 뒤 지금 사용할 화면을 선택해 주세요.
         </p>
 
         {!isFirebaseConfigured ? (
@@ -86,45 +76,6 @@ function LoginPage() {
             </button>
           </div>
 
-          <div className="role-toggle" aria-label="로그인 역할 선택">
-            <button
-              type="button"
-              className={role === 'participant' ? 'role-chip active' : 'role-chip'}
-              onClick={() => setRole('participant')}
-            >
-              당사자 로그인
-            </button>
-            <button
-              type="button"
-              className={role === 'guardian' ? 'role-chip active' : 'role-chip'}
-              onClick={() => setRole('guardian')}
-            >
-              보호자 로그인
-            </button>
-          </div>
-
-          {mode === 'signup' ? (
-            <div className="selection-box">
-              <p className="selection-title">이 계정에 넣을 역할을 선택해요</p>
-              <label className="checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={includeParticipant}
-                  onChange={(event) => setIncludeParticipant(event.target.checked)}
-                />
-                <span>당사자 역할 포함</span>
-              </label>
-              <label className="checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={includeGuardian}
-                  onChange={(event) => setIncludeGuardian(event.target.checked)}
-                />
-                <span>보호자 역할 포함</span>
-              </label>
-            </div>
-          ) : null}
-
           <label className="form-field">
             <span>이메일</span>
             <input
@@ -150,9 +101,9 @@ function LoginPage() {
           <div className="button-row login-actions">
             <button type="submit" className="primary-button">
               {submitting
-                ? '처리 중...'
+                  ? '처리 중...'
                 : mode === 'signup'
-                  ? '역할 계정 만들고 계속하기'
+                  ? '계정 만들고 화면 선택하기'
                   : '로그인하고 계속하기'}
             </button>
             <Link to="/" className="secondary-button link-button">

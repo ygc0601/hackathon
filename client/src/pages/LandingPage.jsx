@@ -1,15 +1,33 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import '../App.css'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 function LandingPage() {
+  const { user, loading, isFirebaseConfigured } = useAuth()
+
+  if (isFirebaseConfigured && loading) {
+    return (
+      <main className="app">
+        <section className="hero-card">
+          <p className="eyebrow">Loading</p>
+          <h1>로그인 상태를 확인하고 있어요</h1>
+        </section>
+      </main>
+    )
+  }
+
+  if (user) {
+    return <Navigate to="/role-select" replace />
+  }
+
   return (
     <main className="app">
       <section className="hero-card">
         <p className="eyebrow">React Router Step</p>
         <h1>같이읽기 웹앱 시작하기</h1>
         <p className="description">
-          이제 한 화면 안에서만 바꾸는 것이 아니라, 실제 웹페이지처럼 주소를
-          나눠서 이동할 수 있어.
+          하나의 계정으로 당사자 화면과 보호자 화면을 함께 사용해요. 로그인
+          후 이 기기에서 사용할 화면을 선택할 수 있어요.
         </p>
 
         <div className="button-row">

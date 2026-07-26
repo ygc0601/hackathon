@@ -4,13 +4,11 @@ import '../App.css'
 
 function RoleSelectPage() {
   const navigate = useNavigate()
-  const { profile, setActiveRole } = useAuth()
+  const { setActiveMode } = useAuth()
 
-  const roles = profile?.roles ?? []
-
-  const handleSelect = (role) => {
-    setActiveRole(role)
-    navigate(role === 'guardian' ? '/guardian' : '/participant')
+  const handleSelect = (mode) => {
+    setActiveMode(mode)
+    navigate(mode === 'guardian' ? '/guardian' : '/participant')
   }
 
   return (
@@ -19,30 +17,25 @@ function RoleSelectPage() {
         <p className="eyebrow">Role Select</p>
         <h1>어떤 역할로 들어갈까요?</h1>
         <p className="description">
-          같은 이메일 계정으로 보호자와 당사자 역할을 함께 사용할 수 있게
-          만들었어. 지금 사용할 역할을 선택해줘.
+          같은 계정으로 두 화면을 모두 사용할 수 있어요. 지금 이 기기에서
+          사용할 화면을 선택해 주세요.
         </p>
 
         <div className="button-row">
-          {roles.includes('participant') ? (
-            <button
-              type="button"
-              className="primary-button"
-              onClick={() => handleSelect('participant')}
-            >
-              당사자 모드
-            </button>
-          ) : null}
-
-          {roles.includes('guardian') ? (
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => handleSelect('guardian')}
-            >
-              보호자 모드
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => handleSelect('participant')}
+          >
+            당사자 화면
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => handleSelect('guardian')}
+          >
+            보호자 화면
+          </button>
         </div>
 
         <div className="button-row login-actions">
