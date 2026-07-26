@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
 import ParticipantView from '../components/ParticipantView.jsx'
 import '../App.css'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 function ParticipantPage() {
+  const { user, logout } = useAuth()
+
   return (
     <main className="app">
       <section className="hero-card">
@@ -13,6 +16,8 @@ function ParticipantPage() {
           자리야.
         </p>
 
+        {user ? <p className="session-text">로그인 계정: {user.email}</p> : null}
+
         <div className="button-row">
           <Link to="/" className="secondary-button link-button">
             처음으로
@@ -20,6 +25,9 @@ function ParticipantPage() {
           <Link to="/guardian" className="primary-button link-button">
             보호자 화면 보기
           </Link>
+          <button type="button" className="secondary-button" onClick={logout}>
+            로그아웃
+          </button>
         </div>
 
         <ParticipantView />

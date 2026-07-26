@@ -44,6 +44,101 @@
   flex-wrap: wrap;
 }
 
+.login-form {
+  margin-top: 28px;
+}
+
+.setup-warning {
+  margin-top: 24px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 236, 214, 0.9);
+  border: 1px solid rgba(228, 92, 48, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  color: #6b4326;
+}
+
+.setup-warning strong {
+  color: #b34824;
+}
+
+.role-toggle {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.role-chip {
+  border: 1px solid rgba(31, 45, 54, 0.12);
+  background: #fff;
+  color: #1f2d36;
+  border-radius: 999px;
+  padding: 12px 16px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.role-chip.active {
+  background: #1f2d36;
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(31, 45, 54, 0.18);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  text-align: left;
+}
+
+.form-field span {
+  font-weight: 700;
+  color: #1f2d36;
+}
+
+.form-field input {
+  border: 1px solid rgba(31, 45, 54, 0.16);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font: inherit;
+  color: #1f2d36;
+  background: #fff;
+}
+
+.form-field input::placeholder {
+  color: #8a949b;
+}
+
+.form-field input:focus {
+  outline: 2px solid rgba(228, 92, 48, 0.22);
+  border-color: #e45c30;
+}
+
+.form-error {
+  margin-top: 16px;
+  color: #b3291d;
+  font-weight: 700;
+}
+
+.login-actions {
+  align-items: center;
+}
+
+.session-text {
+  margin-top: 18px;
+  color: #58656e;
+}
+
 .info-panel {
   margin-top: 28px;
   padding: 24px;

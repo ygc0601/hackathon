@@ -13,11 +13,11 @@ function LandingPage() {
         </p>
 
         <div className="button-row">
-          <Link to="/participant" className="primary-button link-button">
-            당사자 화면으로 이동
+          <Link to="/login" className="primary-button link-button">
+            로그인 시작하기
           </Link>
-          <Link to="/guardian" className="secondary-button link-button">
-            보호자 화면으로 이동
+          <Link to="/participant" className="secondary-button link-button">
+            데모 화면 보기
           </Link>
         </div>
       </section>
