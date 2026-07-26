@@ -3,6 +3,7 @@ import LandingPage from './pages/LandingPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import ParticipantPage from './pages/ParticipantPage.jsx'
 import GuardianPage from './pages/GuardianPage.jsx'
+import RoleSelectPage from './pages/RoleSelectPage.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 function App() {
@@ -11,9 +12,17 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
-        path="/participant"
+        path="/role-select"
         element={
           <ProtectedRoute>
+            <RoleSelectPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/participant"
+        element={
+          <ProtectedRoute requiredRole="participant">
             <ParticipantPage />
           </ProtectedRoute>
         }
@@ -21,7 +30,7 @@ function App() {
       <Route
         path="/guardian"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="guardian">
             <GuardianPage />
           </ProtectedRoute>
         }

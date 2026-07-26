@@ -1,8 +1,8 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 
-function ProtectedRoute({ children }) {
-  const { user, loading, isFirebaseConfigured } = useAuth()
+function ProtectedRoute({ children, requiredRole }) {
+  const { user, loading, isFirebaseConfigured, profile } = useAuth()
 
   if (!isFirebaseConfigured) {
     return children
@@ -21,6 +21,10 @@ function ProtectedRoute({ children }) {
 
   if (!user) {
     return <Navigate to="/login" replace />
+  }
+
+  if (requiredRole && !profile?.roles?.includes(requiredRole)) {
+    return <Navigate to="/role-select" replace />
   }
 
   return children

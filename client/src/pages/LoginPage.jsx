@@ -10,6 +10,8 @@ function LoginPage() {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [includeGuardian, setIncludeGuardian] = useState(false)
+  const [includeParticipant, setIncludeParticipant] = useState(true)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -28,12 +30,17 @@ function LoginPage() {
       setSubmitting(true)
 
       if (mode === 'signup') {
-        await signup(email, password)
-      } else {
-        await login(email, password)
-      }
+        const roles = [
+          includeParticipant ? 'participant' : null,
+          includeGuardian ? 'guardian' : null,
+        ].filter(Boolean)
 
-      navigate(nextPath)
+        const result = await signup(email, password, roles)
+        navigate(result.nextPath)
+      } else {
+        const result = await login(email, password)
+        navigate(result.nextPath)
+      }
     } catch (caughtError) {
       setError(caughtError.message)
     } finally {
@@ -96,6 +103,28 @@ function LoginPage() {
             </button>
           </div>
 
+          {mode === 'signup' ? (
+            <div className="selection-box">
+              <p className="selection-title">이 계정에 넣을 역할을 선택해요</p>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={includeParticipant}
+                  onChange={(event) => setIncludeParticipant(event.target.checked)}
+                />
+                <span>당사자 역할 포함</span>
+              </label>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={includeGuardian}
+                  onChange={(event) => setIncludeGuardian(event.target.checked)}
+                />
+                <span>보호자 역할 포함</span>
+              </label>
+            </div>
+          ) : null}
+
           <label className="form-field">
             <span>이메일</span>
             <input
@@ -123,7 +152,7 @@ function LoginPage() {
               {submitting
                 ? '처리 중...'
                 : mode === 'signup'
-                  ? '회원가입하고 계속하기'
+                  ? '역할 계정 만들고 계속하기'
                   : '로그인하고 계속하기'}
             </button>
             <Link to="/" className="secondary-button link-button">
