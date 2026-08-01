@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext.jsx'
+import useAuth from '../hooks/useAuth.js'
 import '../App.css'
 
 function RoleSelectPage() {

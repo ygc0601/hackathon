@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import '../App.css'
-import { useAuth } from '../contexts/AuthContext.jsx'
+import useAuth from '../hooks/useAuth.js'
 
 function LoginPage() {
   const navigate = useNavigate()

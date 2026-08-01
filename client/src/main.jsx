@@ -4,13 +4,16 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
+import { AccessibilityProvider } from './contexts/AccessibilityContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <AccessibilityProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AccessibilityProvider>
     </AuthProvider>
   </StrictMode>,
 )

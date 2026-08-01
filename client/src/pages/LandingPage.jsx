@@ -1,6 +1,6 @@
 import { Link, Navigate } from 'react-router-dom'
 import '../App.css'
-import { useAuth } from '../contexts/AuthContext.jsx'
+import useAuth from '../hooks/useAuth.js'
 
 function LandingPage() {
   const { user, loading, isFirebaseConfigured } = useAuth()

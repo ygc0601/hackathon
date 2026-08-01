@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -7,8 +7,7 @@ import {
 } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
 import { auth, db, isFirebaseConfigured } from '../firebase/config.js'
-
-const AuthContext = createContext(null)
+import AuthState from './authState.js'
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -85,17 +84,7 @@ function AuthProvider({ children }) {
     [activeMode, loading, user],
   )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthState.Provider value={value}>{children}</AuthState.Provider>
 }
 
-function useAuth() {
-  const context = useContext(AuthContext)
-
-  if (!context) {
-    throw new Error('useAuth는 AuthProvider 안에서 사용해야 해요.')
-  }
-
-  return context
-}
-
-export { AuthProvider, useAuth }
+export { AuthProvider }
