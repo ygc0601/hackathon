@@ -1,51 +1,25 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth.js'
 import '../App.css'
 
 function RoleSelectPage() {
-  const navigate = useNavigate()
-  const { setActiveMode } = useAuth()
+  const { accountType, loading } = useAuth()
 
-  const handleSelect = (mode) => {
-    setActiveMode(mode)
-    navigate(mode === 'guardian' ? '/guardian' : '/participant')
+  if (loading) {
+    return (
+      <main className="app">
+        <section className="hero-card">
+          <p className="eyebrow">Loading</p>
+          <h1>연결 상태를 확인하고 있어요</h1>
+        </section>
+      </main>
+    )
   }
 
-  return (
-    <main className="app">
-      <section className="hero-card">
-        <p className="eyebrow">Role Select</p>
-        <h1>어떤 역할로 들어갈까요?</h1>
-        <p className="description">
-          같은 계정으로 두 화면을 모두 사용할 수 있어요. 지금 이 기기에서
-          사용할 화면을 선택해 주세요.
-        </p>
+  if (accountType === 'guardian') return <Navigate to="/guardian" replace />
+  if (accountType === 'participant') return <Navigate to="/participant" replace />
 
-        <div className="button-row">
-          <button
-            type="button"
-            className="primary-button"
-            onClick={() => handleSelect('participant')}
-          >
-            당사자 화면
-          </button>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => handleSelect('guardian')}
-          >
-            보호자 화면
-          </button>
-        </div>
-
-        <div className="button-row login-actions">
-          <Link to="/" className="secondary-button link-button">
-            처음으로
-          </Link>
-        </div>
-      </section>
-    </main>
-  )
+  return <Navigate to="/login" replace />
 }
 
 export default RoleSelectPage

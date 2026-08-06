@@ -170,18 +170,26 @@ function ParticipantView() {
         </div>
       ) : !imageUrl ? (
         <div className="camera-start">
+          <div className="participant-ready-badge">
+            <span aria-hidden="true" />
+            쉬운말 준비가 되었어요
+          </div>
           {settings.showPictograms ? (
             <div className="document-symbol" aria-hidden="true">
               <span /><span /><span />
             </div>
           ) : null}
           <p className="participant-kicker">어려운 글이 있나요?</p>
-          <h1>사진을 찍으면<br />쉽게 읽어드려요</h1>
+          <h1>사진을 찍으면 쉽게 읽어드려요</h1>
           <button type="button" className="camera-button" onClick={openCamera}>
             <span className="camera-icon"><CameraIcon /></span>
-            <span>카메라로<br />쉬운 말 보기</span>
+            <span>카메라로 쉬운 말 보기</span>
           </button>
           <p className="camera-help">우편물이나 안내문을 화면에 맞춰 찍어 주세요.</p>
+          <div className="camera-tips" aria-label="사진 찍는 방법">
+            <span><strong>1</strong>글이 잘 보이게</span>
+            <span><strong>2</strong>밝은 곳에서</span>
+          </div>
         </div>
       ) : (
         <div className="photo-review">

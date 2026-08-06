@@ -22,7 +22,7 @@ function App() {
       <Route
         path="/participant"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedAccountType="participant">
             <ParticipantPage />
           </ProtectedRoute>
         }
@@ -30,7 +30,7 @@ function App() {
       <Route
         path="/guardian"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedAccountType="guardian">
             <GuardianPage />
           </ProtectedRoute>
         }

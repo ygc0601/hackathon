@@ -6,8 +6,10 @@ import DEFAULT_SETTINGS from './accessibilityDefaults.js'
 import AccessibilityState from './accessibilityState.js'
 
 const STORAGE_KEY = 'together-reading-accessibility-settings'
+const PARTICIPANT_RETRY_DELAYS = [400, 900, 1800]
+
 function AccessibilityProvider({ children }) {
-  const { user } = useAuth()
+  const { accountType, settingsOwnerId } = useAuth()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -31,28 +33,56 @@ function AccessibilityProvider({ children }) {
       return undefined
     }
 
-    if (!user || !db) {
+    if (!settingsOwnerId || !db) {
       setSettings(DEFAULT_SETTINGS)
       setLoading(false)
       return undefined
     }
 
-    setLoading(true)
-    const settingsRef = doc(db, 'accessibilityProfiles', user.uid)
+    const settingsRef = doc(db, 'accessibilityProfiles', settingsOwnerId)
+    let unsubscribe
+    let retryTimer
+    let retryCount = 0
+    let cancelled = false
 
-    return onSnapshot(
-      settingsRef,
-      (snapshot) => {
-        const savedSettings = snapshot.exists() ? snapshot.data() : {}
-        setSettings({ ...DEFAULT_SETTINGS, ...savedSettings })
-        setLoading(false)
-      },
-      () => {
-        setError('설정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
-        setLoading(false)
-      },
-    )
-  }, [user])
+    const subscribe = () => {
+      setLoading(true)
+      unsubscribe = onSnapshot(
+        settingsRef,
+        (snapshot) => {
+          const savedSettings = snapshot.exists() ? snapshot.data() : {}
+          setSettings({ ...DEFAULT_SETTINGS, ...savedSettings })
+          setError('')
+          setLoading(false)
+        },
+        (snapshotError) => {
+          const shouldRetry =
+            !cancelled
+            && accountType === 'participant'
+            && snapshotError.code === 'permission-denied'
+            && retryCount < PARTICIPANT_RETRY_DELAYS.length
+
+          if (shouldRetry) {
+            const delay = PARTICIPANT_RETRY_DELAYS[retryCount]
+            retryCount += 1
+            retryTimer = window.setTimeout(subscribe, delay)
+            return
+          }
+
+          setError('설정을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.')
+          setLoading(false)
+        },
+      )
+    }
+
+    subscribe()
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(retryTimer)
+      unsubscribe?.()
+    }
+  }, [accountType, settingsOwnerId])
 
   const saveSettings = async (nextSettings) => {
     const normalizedSettings = {
@@ -65,14 +95,20 @@ function AccessibilityProvider({ children }) {
     setError('')
 
     try {
-      if (isFirebaseConfigured && user && db) {
+      if (isFirebaseConfigured && db) {
+        if (accountType !== 'guardian' || !settingsOwnerId) {
+          throw new Error('당사자 기기에서는 설정을 바꿀 수 없어요.')
+        }
+
         await setDoc(
-          doc(db, 'accessibilityProfiles', user.uid),
+          doc(db, 'accessibilityProfiles', settingsOwnerId),
           { ...normalizedSettings, updatedAt: serverTimestamp() },
           { merge: true },
         )
-      } else {
+      } else if (!isFirebaseConfigured) {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSettings))
+      } else {
+        throw new Error('보호자 로그인이 필요해요.')
       }
 
       setSettings(normalizedSettings)

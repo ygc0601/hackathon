@@ -82,11 +82,14 @@ function GuardianView() {
   return (
     <section className="info-panel settings-panel">
       <div className="settings-heading">
-        <div>
-          <p className="panel-label">접근성 설정</p>
-          <h2>읽기 편한 방법을 정해요</h2>
+        <div className="panel-title-group">
+          <span className="panel-number" aria-hidden="true">02</span>
+          <div>
+            <p className="panel-label">접근성 설정</p>
+            <h2>읽기 편한 방법을 정해요</h2>
+          </div>
         </div>
-        <span className="sync-badge">같은 계정에 적용</span>
+        <span className="sync-badge">연결 기기에 적용</span>
       </div>
 
       <form className="settings-form" onSubmit={handleSubmit}>

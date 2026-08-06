@@ -1,11 +1,11 @@
 import { Navigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth.js'
 
-function ProtectedRoute({ children }) {
-  const { user, loading, isFirebaseConfigured } = useAuth()
+function ProtectedRoute({ children, allowedAccountType }) {
+  const { accountType, user, loading, isFirebaseConfigured } = useAuth()
 
   if (!isFirebaseConfigured) {
-    return children
+    return <Navigate to="/login" replace />
   }
 
   if (loading) {
@@ -20,6 +20,18 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (allowedAccountType && accountType !== allowedAccountType) {
+    if (accountType === 'guardian') {
+      return <Navigate to="/guardian" replace />
+    }
+
+    if (accountType === 'participant') {
+      return <Navigate to="/participant" replace />
+    }
+
     return <Navigate to="/login" replace />
   }
 

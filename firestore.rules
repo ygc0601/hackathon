@@ -2,8 +2,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isLinkedParticipant(guardianUid) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/deviceLinks/$(request.auth.uid))
+        && get(/databases/$(database)/documents/deviceLinks/$(request.auth.uid)).data.guardianUid == guardianUid;
     }
 
     function hasValidAccessibilitySettings() {
@@ -40,17 +50,91 @@ service cloud.firestore {
     match /userProfiles/{userId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId)
-        && request.resource.data.email == request.auth.token.email;
+        && request.resource.data.keys().hasAll(['email', 'accountType', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['email', 'accountType', 'createdAt'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.accountType == 'guardian';
       allow update: if isOwner(userId)
-        && request.resource.data.email == resource.data.email;
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.accountType == 'guardian';
       allow delete: if isOwner(userId);
     }
 
-    match /accessibilityProfiles/{userId} {
-      allow read: if isOwner(userId);
-      allow create, update: if isOwner(userId)
+    match /accessibilityProfiles/{guardianUid} {
+      allow read: if isOwner(guardianUid) || isLinkedParticipant(guardianUid);
+      allow create, update: if isOwner(guardianUid)
         && hasValidAccessibilitySettings();
-      allow delete: if isOwner(userId);
+      allow delete: if isOwner(guardianUid);
+    }
+
+    match /pairingCodes/{pairingCode} {
+      allow create: if isSignedIn()
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.resource.data.keys().hasAll([
+          'guardianUid',
+          'status',
+          'createdAt',
+          'expiresAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'guardianUid',
+          'status',
+          'createdAt',
+          'expiresAt'
+        ])
+        && request.resource.data.guardianUid == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time;
+
+      // A high-entropy code is required to fetch one document; listing codes is blocked.
+      allow get: if isSignedIn();
+      allow list: if false;
+
+      allow update: if isSignedIn()
+        && request.auth.token.firebase.sign_in_provider == 'anonymous'
+        && resource.data.status == 'active'
+        && resource.data.expiresAt > request.time
+        && !('claimedBy' in resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'claimedBy',
+          'claimedAt'
+        ])
+        && request.resource.data.status == 'used'
+        && request.resource.data.claimedBy == request.auth.uid
+        && request.resource.data.claimedAt is timestamp;
+
+      allow delete: if isSignedIn()
+        && resource.data.guardianUid == request.auth.uid;
+    }
+
+    match /deviceLinks/{deviceUid} {
+      allow create: if isOwner(deviceUid)
+        && request.auth.token.firebase.sign_in_provider == 'anonymous'
+        && request.resource.data.keys().hasAll([
+          'guardianUid',
+          'pairingCode',
+          'connectedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'guardianUid',
+          'pairingCode',
+          'connectedAt'
+        ])
+        && request.resource.data.connectedAt is timestamp
+        && getAfter(/databases/$(database)/documents/pairingCodes/$(request.resource.data.pairingCode)).data.status == 'used'
+        && getAfter(/databases/$(database)/documents/pairingCodes/$(request.resource.data.pairingCode)).data.claimedBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/pairingCodes/$(request.resource.data.pairingCode)).data.guardianUid == request.resource.data.guardianUid;
+
+      allow get: if isOwner(deviceUid)
+        || (isSignedIn() && resource.data.guardianUid == request.auth.uid);
+      allow list: if isSignedIn()
+        && resource.data.guardianUid == request.auth.uid;
+      allow update: if false;
+      allow delete: if isOwner(deviceUid)
+        || (isSignedIn() && resource.data.guardianUid == request.auth.uid);
     }
   }
 }
