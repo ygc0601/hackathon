@@ -38,10 +38,16 @@ function LandingPage() {
         <div className="landing-copy">
           <p className="section-tag"><span />함께 이해하는 쉬운 정보</p>
           <h1>
-            어려운 글, <em>같이 읽으면</em> 쉬워져요.
+            어려운 글,
+            <br />
+            <em>같이 읽으면</em>
+            <br />
+            쉬워져요.
           </h1>
           <p className="landing-description">
-            우편물과 안내문을 찍어 보세요. 쉬운 글과 그림, 음성으로 차근차근 알려드려요.
+            우편물과 안내문을 찍어 보세요.
+            <br />
+            쉬운 글과 그림, 음성으로 차근차근 알려드려요.
           </p>
 
           <div className="landing-actions">
@@ -54,7 +60,7 @@ function LandingPage() {
 
           <ul className="landing-principles" aria-label="같이읽기 원칙">
             <li><span>가</span>쉬운 낱말</li>
-            <li><span>▣</span>뜻을 돕는 그림</li>
+            <li><span>✓</span>중요 정보 확인</li>
             <li><span>♪</span>천천히 듣기</li>
           </ul>
         </div>
@@ -83,9 +89,6 @@ function LandingPage() {
 
           <article className="easy-paper">
             <div className="easy-label"><span />쉬운말</div>
-            <div className="calendar-pictogram" aria-hidden="true">
-              <span>15</span>
-            </div>
             <h2>8월 15일까지</h2>
             <p>돈을 내야 해요.</p>
             <div className="speech-preview">

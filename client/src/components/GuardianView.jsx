@@ -119,17 +119,6 @@ function GuardianView() {
           <legend>보기와 듣기</legend>
           <label className="switch-row">
             <span>
-              <strong>픽토그램 함께 보기</strong>
-              <small>쉬운 글 위에 뜻을 돕는 그림을 표시해요.</small>
-            </span>
-            <input
-              type="checkbox"
-              checked={draft.showPictograms}
-              onChange={(event) => updateSetting('showPictograms', event.target.checked)}
-            />
-          </label>
-          <label className="switch-row">
-            <span>
               <strong>고대비 화면</strong>
               <small>글자와 배경의 차이를 더 크게 만들어요.</small>
             </span>

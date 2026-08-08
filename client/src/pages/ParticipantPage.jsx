@@ -2,11 +2,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import BrandMark from '../components/BrandMark.jsx'
 import ParticipantView from '../components/ParticipantView.jsx'
 import '../App.css'
+import useAccessibility from '../hooks/useAccessibility.js'
 import useAuth from '../hooks/useAuth.js'
 
 function ParticipantPage() {
   const navigate = useNavigate()
   const { disconnectParticipant } = useAuth()
+  const { settings } = useAccessibility()
 
   const handleDisconnect = async () => {
     if (!window.confirm('이 휴대폰의 연결을 해제할까요?')) return
@@ -16,7 +18,9 @@ function ParticipantPage() {
   }
 
   return (
-    <main className="participant-page">
+    <main
+      className={`participant-page${settings.highContrast ? ' participant-high-contrast' : ''}`}
+    >
       <header className="participant-header">
         <Link to="/participant" className="participant-brand">
           <BrandMark compact />

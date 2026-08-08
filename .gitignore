@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+functions/.secret.local
 
 # Dependencies and build outputs
 node_modules/
