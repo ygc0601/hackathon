@@ -23,7 +23,6 @@ service cloud.firestore {
           'easyLanguageLevel',
           'sentenceLength',
           'fontSize',
-          'showPictograms',
           'speechRate',
           'highContrast'
         ])
@@ -31,7 +30,6 @@ service cloud.firestore {
           'easyLanguageLevel',
           'sentenceLength',
           'fontSize',
-          'showPictograms',
           'speechRate',
           'highContrast',
           'updatedAt'
@@ -39,7 +37,6 @@ service cloud.firestore {
         && data.easyLanguageLevel in ['basic', 'standard']
         && data.sentenceLength in ['short', 'medium']
         && data.fontSize in ['large', 'extraLarge']
-        && data.showPictograms is bool
         && data.highContrast is bool
         && data.speechRate is number
         && data.speechRate >= 0.5

@@ -12,6 +12,11 @@ import {
   translationSchema,
 } from './easyLanguagePrompt.js'
 import { findMissingCriticalFacts } from './criticalFacts.js'
+import {
+  calculateConfidence,
+  decodeJpeg,
+  validateTranslationRequest,
+} from './requestValidation.js'
 
 initializeApp()
 
@@ -26,42 +31,10 @@ onInit(() => {
 const MONTHLY_OCR_LIMIT = 900
 const MONTHLY_TRANSLATION_LIMIT = 300
 const DAILY_TRANSLATION_LIMIT = 20
-const MAX_IMAGE_BYTES = 7 * 1024 * 1024
-const MAX_BASE64_LENGTH = Math.ceil(MAX_IMAGE_BYTES / 3) * 4
-const MAX_SOURCE_TEXT_LENGTH = 12_000
 const TRANSLATION_MODEL = 'gpt-5.6-luna'
 
 function getCurrentMonth() {
   return new Date().toISOString().slice(0, 7)
-}
-
-function decodeJpeg(imageBase64, mimeType) {
-  if (mimeType !== 'image/jpeg') {
-    throw new HttpsError('invalid-argument', 'JPEG 사진만 처리할 수 있어요.')
-  }
-
-  if (
-    typeof imageBase64 !== 'string'
-    || imageBase64.length === 0
-    || imageBase64.length > MAX_BASE64_LENGTH
-    || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64)
-  ) {
-    throw new HttpsError('invalid-argument', '사진 데이터가 올바르지 않아요.')
-  }
-
-  const image = Buffer.from(imageBase64, 'base64')
-
-  if (
-    image.length === 0
-    || image.length > MAX_IMAGE_BYTES
-    || image[0] !== 0xff
-    || image[1] !== 0xd8
-    || image[2] !== 0xff
-  ) {
-    throw new HttpsError('invalid-argument', 'JPEG 사진을 다시 선택해 주세요.')
-  }
-
-  return image
 }
 
 async function reserveMonthlyUsage() {
@@ -137,59 +110,18 @@ async function reserveTranslationUsage(uid) {
   })
 }
 
-function validateTranslationRequest(data) {
-  const sourceText = typeof data?.sourceText === 'string'
-    ? data.sourceText
-        .trim()
-        .replace(/\r\n?/g, '\n')
-        .replace(/[^\S\n]+/g, ' ')
-        .replace(/\n{3,}/g, '\n\n')
-    : ''
-  const easyLanguageLevel = data?.easyLanguageLevel === 'standard' ? 'standard' : 'basic'
-  const sentenceLength = data?.sentenceLength === 'medium' ? 'medium' : 'short'
-
-  if (!sourceText) {
-    throw new HttpsError('invalid-argument', '번역할 글이 비어 있어요.')
-  }
-
-  if (sourceText.length > MAX_SOURCE_TEXT_LENGTH) {
-    throw new HttpsError(
-      'invalid-argument',
-      '글이 너무 길어요. 12,000자보다 짧은 문서를 사용해 주세요.',
-    )
-  }
-
-  return { sourceText, easyLanguageLevel, sentenceLength }
-}
-
 async function requireLinkedUser(request) {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', '로그인한 사용자만 이용할 수 있어요.')
   }
 
-  if (request.auth.token.firebase?.sign_in_provider !== 'anonymous') return
+  if (request.auth.token?.firebase?.sign_in_provider !== 'anonymous') return
 
   const link = await db.collection('deviceLinks').doc(request.auth.uid).get()
 
   if (!link.exists) {
     throw new HttpsError('permission-denied', '보호자와 연결된 기기에서 이용해 주세요.')
   }
-}
-
-function calculateConfidence(annotation) {
-  const words = annotation?.pages
-    ?.flatMap((page) => page.blocks ?? [])
-    .flatMap((block) => block.paragraphs ?? [])
-    .flatMap((paragraph) => paragraph.words ?? []) ?? []
-  const confidenceValues = words
-    .map((word) => word.confidence)
-    .filter((confidence) => Number.isFinite(confidence) && confidence > 0)
-
-  if (confidenceValues.length === 0) return null
-
-  const average = confidenceValues.reduce((sum, value) => sum + value, 0)
-    / confidenceValues.length
-  return Math.round(average * 100)
 }
 
 export const extractDocumentText = onCall(
@@ -202,10 +134,7 @@ export const extractDocumentText = onCall(
     concurrency: 10,
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', '로그인한 사용자만 이용할 수 있어요.')
-    }
-
+    await requireLinkedUser(request)
     const image = decodeJpeg(request.data?.imageBase64, request.data?.mimeType)
     const remaining = await reserveMonthlyUsage()
 
@@ -228,6 +157,19 @@ export const extractDocumentText = onCall(
       logger.error('Vision OCR request failed', {
         code: error?.code ?? 'unknown',
       })
+
+      if (error?.code === 8 || error?.code === 'RESOURCE_EXHAUSTED') {
+        throw new HttpsError('resource-exhausted', 'OCR 사용량을 모두 사용했어요.')
+      }
+
+      if (error?.code === 7 || error?.code === 'PERMISSION_DENIED') {
+        throw new HttpsError('failed-precondition', 'OCR 서버 설정을 확인해 주세요.')
+      }
+
+      if (error?.code === 14 || error?.code === 'UNAVAILABLE') {
+        throw new HttpsError('unavailable', 'OCR 서버에 잠시 연결할 수 없어요.')
+      }
+
       throw new HttpsError(
         'internal',
         '사진을 읽는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
@@ -251,10 +193,16 @@ export const simplifyDocumentText = onCall(
     const { sourceText, easyLanguageLevel, sentenceLength } = validateTranslationRequest(
       request.data,
     )
+    const apiKey = openAiApiKey.value()
+
+    if (!apiKey) {
+      throw new HttpsError('failed-precondition', '쉬운말 번역 설정을 확인해 주세요.')
+    }
+
     const remaining = process.env.FUNCTIONS_EMULATOR === 'true'
       ? null
       : await reserveTranslationUsage(request.auth.uid)
-    const openai = new OpenAI({ apiKey: openAiApiKey.value() })
+    const openai = new OpenAI({ apiKey })
     const prompt = getTranslationPrompt(sourceText, easyLanguageLevel, sentenceLength)
 
     try {
@@ -292,6 +240,13 @@ export const simplifyDocumentText = onCall(
       })
 
       if (response.status !== 'completed' || !response.output_text) {
+        if (response.incomplete_details?.reason === 'max_output_tokens') {
+          throw new HttpsError(
+            'failed-precondition',
+            '문서 내용이 너무 길어요. 더 짧은 문서로 다시 시도해 주세요.',
+          )
+        }
+
         throw new Error(`OpenAI response status: ${response.status}`)
       }
 
@@ -342,7 +297,9 @@ export const simplifyDocumentText = onCall(
         type: error?.type ?? 'unknown',
       })
 
-      if (error?.status === 401) {
+      if (error instanceof HttpsError) throw error
+
+      if (error?.status === 401 || error?.status === 403) {
         throw new HttpsError(
           'failed-precondition',
           '쉬운말 번역 설정을 확인해 주세요.',
@@ -353,6 +310,17 @@ export const simplifyDocumentText = onCall(
         throw new HttpsError(
           'resource-exhausted',
           '번역 요청이 많아요. 잠시 후 다시 시도해 주세요.',
+        )
+      }
+
+      if (
+        error?.status === 408
+        || error?.status >= 500
+        || error?.name === 'APIConnectionError'
+      ) {
+        throw new HttpsError(
+          'unavailable',
+          '쉬운말 번역 서버에 잠시 연결할 수 없어요.',
         )
       }
 

@@ -1,5 +1,7 @@
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '../firebase/config.js'
+import { getCallableErrorMessage } from './callableErrors.js'
+import { normalizeOcrResponse } from './responseValidation.js'
 
 const MAX_SOURCE_BYTES = 10 * 1024 * 1024
 const MAX_UPLOAD_BYTES = 7 * 1024 * 1024
@@ -30,6 +32,10 @@ function createUploadCanvas(image) {
   const canvas = document.createElement('canvas')
   const context = canvas.getContext('2d')
 
+  if (!context) {
+    throw new Error('이 브라우저에서는 사진을 처리할 수 없어요. 다른 브라우저를 사용해 주세요.')
+  }
+
   canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
   canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
   context.fillStyle = '#ffffff'
@@ -58,18 +64,6 @@ function blobToBase64(blob) {
     reader.onerror = () => reject(new Error('사진을 읽지 못했어요.'))
     reader.readAsDataURL(blob)
   })
-}
-
-function getFriendlyError(error) {
-  const code = error?.code?.replace('functions/', '')
-
-  if (code === 'unauthenticated') return '로그인한 뒤 다시 시도해 주세요.'
-  if (code === 'resource-exhausted') {
-    return '이번 달 무료 OCR 사용량을 모두 사용했어요.'
-  }
-  if (code === 'invalid-argument') return error.message
-
-  return '사진을 읽는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'
 }
 
 async function extractDocumentText(file, onProgress = () => {}) {
@@ -111,9 +105,17 @@ async function extractDocumentText(file, onProgress = () => {}) {
     })
 
     onProgress({ percent: 100, label: '글자를 다 읽었어요' })
-    return result.data
+    return normalizeOcrResponse(result.data)
   } catch (error) {
-    throw new Error(getFriendlyError(error))
+    if (!error.code && error.message) throw error
+
+    throw new Error(getCallableErrorMessage(error, {
+      messages: {
+        'resource-exhausted': '이번 달 무료 OCR 사용량을 모두 사용했어요.',
+        'failed-precondition': 'OCR 설정을 확인해 주세요.',
+      },
+      fallback: '사진을 읽는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    }))
   }
 }
 

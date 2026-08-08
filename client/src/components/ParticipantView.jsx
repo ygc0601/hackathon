@@ -26,6 +26,7 @@ function CameraIcon() {
 
 function ParticipantView() {
   const inputRef = useRef(null)
+  const processingRunRef = useRef(0)
   const speechRunRef = useRef(0)
   const { settings, loading, error: settingsError } = useAccessibility()
   const [imageFile, setImageFile] = useState(null)
@@ -59,6 +60,7 @@ function ParticipantView() {
 
   useEffect(() => {
     return () => {
+      processingRunRef.current += 1
       speechRunRef.current += 1
       window.speechSynthesis?.cancel()
     }
@@ -173,10 +175,13 @@ function ParticipantView() {
     setImageName(file.name)
     event.target.value = ''
 
-    void handleDocument(file)
+    const runId = processingRunRef.current + 1
+    processingRunRef.current = runId
+    void handleDocument(file, runId)
   }
 
   const resetImage = () => {
+    processingRunRef.current += 1
     stopSpeech()
     setImageFile(null)
     setImageUrl('')
@@ -194,8 +199,12 @@ function ParticipantView() {
     setMissingCriticalFacts([])
   }
 
-  const handleDocument = async (selectedFile = imageFile) => {
+  const handleDocument = async (selectedFile = imageFile, requestedRunId) => {
     if (!selectedFile) return
+
+    const runId = requestedRunId ?? processingRunRef.current + 1
+    processingRunRef.current = runId
+    const isCurrentRun = () => processingRunRef.current === runId
 
     stopSpeech()
     setProcessing(true)
@@ -204,7 +213,11 @@ function ParticipantView() {
     setOcrProgress({ percent: 1, label: '사진을 준비하고 있어요' })
 
     try {
-      const ocrResult = await extractDocumentText(selectedFile, setOcrProgress)
+      const ocrResult = await extractDocumentText(selectedFile, (progress) => {
+        if (isCurrentRun()) setOcrProgress(progress)
+      })
+
+      if (!isCurrentRun()) return
 
       if (!ocrResult.text) {
         setMessage('사진에서 글자를 찾지 못했어요. 더 밝은 곳에서 다시 찍어 주세요.')
@@ -219,21 +232,29 @@ function ParticipantView() {
 
       const translationResult = await simplifyDocumentText(ocrResult.text, settings)
 
+      if (!isCurrentRun()) return
+
       setEasySummary(translationResult.summary)
       setEasySentences(translationResult.sentences)
       setCriticalPoints(translationResult.criticalPoints)
       setUncertainParts(translationResult.uncertainParts)
       setMissingCriticalFacts(translationResult.missingCriticalFacts)
     } catch (error) {
-      setMessage(error.message)
+      if (isCurrentRun()) setMessage(error.message)
     } finally {
-      setProcessing(false)
-      setTranslating(false)
+      if (isCurrentRun()) {
+        setProcessing(false)
+        setTranslating(false)
+      }
     }
   }
 
   const handleSimplify = async () => {
     if (!ocrText) return
+
+    const runId = processingRunRef.current + 1
+    processingRunRef.current = runId
+    const isCurrentRun = () => processingRunRef.current === runId
 
     stopSpeech()
     setTranslating(true)
@@ -241,15 +262,18 @@ function ParticipantView() {
 
     try {
       const result = await simplifyDocumentText(ocrText, settings)
+
+      if (!isCurrentRun()) return
+
       setEasySummary(result.summary)
       setEasySentences(result.sentences)
       setCriticalPoints(result.criticalPoints)
       setUncertainParts(result.uncertainParts)
       setMissingCriticalFacts(result.missingCriticalFacts)
     } catch (error) {
-      setMessage(error.message)
+      if (isCurrentRun()) setMessage(error.message)
     } finally {
-      setTranslating(false)
+      if (isCurrentRun()) setTranslating(false)
     }
   }
 
@@ -292,6 +316,9 @@ function ParticipantView() {
             <span style={{ width: `${ocrProgress.percent}%` }} />
           </div>
           <output className="ocr-progress-value">{ocrProgress.percent}%</output>
+          <button type="button" className="loading-cancel-action" onClick={resetImage}>
+            그만하기
+          </button>
         </div>
       ) : translating ? (
         <div className="ocr-loading" aria-live="polite">
@@ -299,6 +326,9 @@ function ParticipantView() {
           <p className="participant-kicker">쉬운 낱말을 고르고 있어요</p>
           <h1>쉬운말로 바꾸고 있어요</h1>
           <p className="ocr-progress-label">중요한 숫자와 날짜를 그대로 확인하고 있어요.</p>
+          <button type="button" className="loading-cancel-action" onClick={resetImage}>
+            그만하기
+          </button>
         </div>
       ) : easySentences.length > 0 ? (
         <div className="easy-language-result">

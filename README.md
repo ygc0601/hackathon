@@ -152,6 +152,7 @@ npm run dev
 ```powershell
 cd client
 npm run lint
+npm test
 npm run build
 ```
 

@@ -10,23 +10,9 @@ import {
 } from 'firebase/auth'
 import { deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { auth, db, isFirebaseConfigured } from '../firebase/config.js'
-import { claimPairingCode } from '../services/pairing.js'
+import { getAuthErrorMessage, getSessionErrorMessage } from '../services/authErrors.js'
+import { claimPairingCode, normalizePairingCode } from '../services/pairing.js'
 import AuthState from './authState.js'
-
-function getAuthErrorMessage(error) {
-  const messages = {
-    'auth/admin-restricted-operation': 'Firebase 콘솔에서 익명 로그인을 먼저 켜 주세요.',
-    'auth/email-already-in-use': '이미 가입된 이메일이에요. 로그인해 주세요.',
-    'auth/invalid-credential': '이메일이나 비밀번호가 맞지 않아요.',
-    'auth/invalid-email': '이메일 주소를 다시 확인해 주세요.',
-    'auth/network-request-failed': '인터넷 연결을 확인한 뒤 다시 시도해 주세요.',
-    'auth/operation-not-allowed': 'Firebase 콘솔에서 이 로그인 방법을 먼저 켜 주세요.',
-    'auth/too-many-requests': '시도가 너무 많아요. 잠시 후 다시 시도해 주세요.',
-    'auth/weak-password': '비밀번호는 6자 이상 입력해 주세요.',
-  }
-
-  return messages[error.code] ?? '로그인 처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'
-}
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -142,6 +128,12 @@ function AuthProvider({ children }) {
           throw new Error('Firebase 설정이 아직 연결되지 않았어요.')
         }
 
+        const normalizedCode = normalizePairingCode(code)
+
+        if (normalizedCode.length !== 8) {
+          throw new Error('연결 코드 8자리를 확인해 주세요.')
+        }
+
         try {
           if (auth.currentUser && !auth.currentUser.isAnonymous) {
             await signOut(auth)
@@ -151,7 +143,7 @@ function AuthProvider({ children }) {
             ? { user: auth.currentUser }
             : await signInAnonymously(auth)
 
-          const link = await claimPairingCode(db, credential.user.uid, code)
+          const link = await claimPairingCode(db, credential.user.uid, normalizedCode)
           setDeviceLink(link)
           return { nextPath: '/participant' }
         } catch (error) {
@@ -163,7 +155,7 @@ function AuthProvider({ children }) {
             throw error
           }
 
-          throw new Error(getAuthErrorMessage(error))
+          throw new Error(getSessionErrorMessage(error, getAuthErrorMessage(error)))
         }
       },
       resetPassword: async (email) => {
@@ -182,18 +174,32 @@ function AuthProvider({ children }) {
           return
         }
 
-        if (auth.currentUser.isAnonymous) {
-          await deleteDoc(doc(db, 'deviceLinks', auth.currentUser.uid))
-        }
+        try {
+          if (auth.currentUser.isAnonymous) {
+            await deleteDoc(doc(db, 'deviceLinks', auth.currentUser.uid))
+          }
 
-        await signOut(auth)
+          await signOut(auth)
+        } catch (error) {
+          throw new Error(getSessionErrorMessage(
+            error,
+            '기기 연결을 해제하지 못했어요. 잠시 후 다시 시도해 주세요.',
+          ))
+        }
       },
       logout: async () => {
         if (!auth) {
           return
         }
 
-        await signOut(auth)
+        try {
+          await signOut(auth)
+        } catch (error) {
+          throw new Error(getSessionErrorMessage(
+            error,
+            '로그아웃하지 못했어요. 잠시 후 다시 시도해 주세요.',
+          ))
+        }
       },
     }),
     [accountType, deviceLink, loading, settingsOwnerId, user],

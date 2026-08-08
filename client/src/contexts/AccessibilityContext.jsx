@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../firebase/config.js'
 import useAuth from '../hooks/useAuth.js'
-import DEFAULT_SETTINGS from './accessibilityDefaults.js'
+import DEFAULT_SETTINGS, {
+  normalizeAccessibilitySettings,
+} from './accessibilityDefaults.js'
 import AccessibilityState from './accessibilityState.js'
 
 const STORAGE_KEY = 'together-reading-accessibility-settings'
@@ -19,13 +21,19 @@ function AccessibilityProvider({ children }) {
     setError('')
 
     if (!isFirebaseConfigured) {
-      const savedSettings = window.localStorage.getItem(STORAGE_KEY)
+      try {
+        const savedSettings = window.localStorage.getItem(STORAGE_KEY)
 
-      if (savedSettings) {
+        if (savedSettings) {
+          setSettings(normalizeAccessibilitySettings(JSON.parse(savedSettings)))
+        }
+      } catch {
+        setSettings(DEFAULT_SETTINGS)
+
         try {
-          setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) })
-        } catch {
           window.localStorage.removeItem(STORAGE_KEY)
+        } catch {
+          // Storage can be unavailable in privacy-restricted browsers.
         }
       }
 
@@ -51,7 +59,7 @@ function AccessibilityProvider({ children }) {
         settingsRef,
         (snapshot) => {
           const savedSettings = snapshot.exists() ? snapshot.data() : {}
-          setSettings({ ...DEFAULT_SETTINGS, ...savedSettings })
+          setSettings(normalizeAccessibilitySettings(savedSettings))
           setError('')
           setLoading(false)
         },
@@ -85,11 +93,7 @@ function AccessibilityProvider({ children }) {
   }, [accountType, settingsOwnerId])
 
   const saveSettings = async (nextSettings) => {
-    const normalizedSettings = {
-      ...DEFAULT_SETTINGS,
-      ...nextSettings,
-      speechRate: Number(nextSettings.speechRate),
-    }
+    const normalizedSettings = normalizeAccessibilitySettings(nextSettings)
 
     setSaving(true)
     setError('')
@@ -103,7 +107,6 @@ function AccessibilityProvider({ children }) {
         await setDoc(
           doc(db, 'accessibilityProfiles', settingsOwnerId),
           { ...normalizedSettings, updatedAt: serverTimestamp() },
-          { merge: true },
         )
       } else if (!isFirebaseConfigured) {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSettings))
@@ -112,9 +115,13 @@ function AccessibilityProvider({ children }) {
       }
 
       setSettings(normalizedSettings)
-    } catch {
-      setError('설정을 저장하지 못했어요. 인터넷 연결을 확인해 주세요.')
-      throw new Error('설정 저장 실패')
+    } catch (saveError) {
+      const message = saveError?.code === 'permission-denied'
+        ? '이 계정에서는 설정을 저장할 수 없어요. 다시 로그인해 주세요.'
+        : '설정을 저장하지 못했어요. 인터넷 연결을 확인해 주세요.'
+
+      setError(message)
+      throw new Error(message)
     } finally {
       setSaving(false)
     }

@@ -1,10 +1,9 @@
 import {
   Timestamp,
   doc,
-  getDoc,
+  runTransaction,
   serverTimestamp,
   setDoc,
-  writeBatch,
 } from 'firebase/firestore'
 
 const CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -19,7 +18,7 @@ function createRandomCode() {
 }
 
 export function normalizePairingCode(value) {
-  return value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return String(value ?? '').toUpperCase().replace(/[^2-9A-HJ-NP-Z]/g, '')
 }
 
 export function formatPairingCode(value) {
@@ -51,35 +50,35 @@ export async function claimPairingCode(db, participantUid, rawCode) {
   }
 
   const pairingRef = doc(db, 'pairingCodes', code)
-  const pairingSnapshot = await getDoc(pairingRef)
 
-  if (!pairingSnapshot.exists()) {
-    throw new Error('연결 코드를 찾지 못했어요. 보호자에게 새 코드를 받아 주세요.')
-  }
+  return runTransaction(db, async (transaction) => {
+    const pairingSnapshot = await transaction.get(pairingRef)
 
-  const pairing = pairingSnapshot.data()
+    if (!pairingSnapshot.exists()) {
+      throw new Error('연결 코드를 찾지 못했어요. 보호자에게 새 코드를 받아 주세요.')
+    }
 
-  if (pairing.status !== 'active' || pairing.claimedBy) {
-    throw new Error('이미 사용한 연결 코드예요. 보호자에게 새 코드를 받아 주세요.')
-  }
+    const pairing = pairingSnapshot.data()
 
-  if (!pairing.expiresAt || pairing.expiresAt.toMillis() <= Date.now()) {
-    throw new Error('연결 코드의 시간이 지났어요. 보호자에게 새 코드를 받아 주세요.')
-  }
+    if (pairing.status !== 'active' || pairing.claimedBy) {
+      throw new Error('이미 사용한 연결 코드예요. 보호자에게 새 코드를 받아 주세요.')
+    }
 
-  const batch = writeBatch(db)
-  batch.update(pairingRef, {
-    status: 'used',
-    claimedBy: participantUid,
-    claimedAt: serverTimestamp(),
+    if (!pairing.expiresAt || pairing.expiresAt.toMillis() <= Date.now()) {
+      throw new Error('연결 코드의 시간이 지났어요. 보호자에게 새 코드를 받아 주세요.')
+    }
+
+    transaction.update(pairingRef, {
+      status: 'used',
+      claimedBy: participantUid,
+      claimedAt: serverTimestamp(),
+    })
+    transaction.set(doc(db, 'deviceLinks', participantUid), {
+      guardianUid: pairing.guardianUid,
+      pairingCode: code,
+      connectedAt: serverTimestamp(),
+    })
+
+    return { guardianUid: pairing.guardianUid }
   })
-  batch.set(doc(db, 'deviceLinks', participantUid), {
-    guardianUid: pairing.guardianUid,
-    pairingCode: code,
-    connectedAt: serverTimestamp(),
-  })
-
-  await batch.commit()
-
-  return { guardianUid: pairing.guardianUid }
 }

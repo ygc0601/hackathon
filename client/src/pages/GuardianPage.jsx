@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import BrandMark from '../components/BrandMark.jsx'
 import DevicePairingPanel from '../components/DevicePairingPanel.jsx'
@@ -8,10 +9,21 @@ import useAuth from '../hooks/useAuth.js'
 function GuardianPage() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
 
   const handleLogout = async () => {
-    await logout()
-    navigate('/login')
+    setLoggingOut(true)
+    setLogoutError('')
+
+    try {
+      await logout()
+      navigate('/login')
+    } catch (error) {
+      setLogoutError(error.message)
+    } finally {
+      setLoggingOut(false)
+    }
   }
 
   return (
@@ -28,12 +40,21 @@ function GuardianPage() {
                 <span><small>보호자</small>{user.email}</span>
               </span>
             ) : null}
-            <button type="button" className="header-logout-button" onClick={handleLogout}>
-              로그아웃
+            <button
+              type="button"
+              className="header-logout-button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+            >
+              {loggingOut ? '로그아웃 중...' : '로그아웃'}
             </button>
           </div>
         </div>
       </header>
+
+      {logoutError ? (
+        <p className="guardian-session-error" role="alert">{logoutError}</p>
+      ) : null}
 
       <section className="guardian-shell">
         <header className="guardian-welcome">
